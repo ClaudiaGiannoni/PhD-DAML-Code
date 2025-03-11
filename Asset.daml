@@ -1,0 +1,62 @@
+module Asset where
+
+type AssetId = ContractId Asset
+
+template Asset 
+  with
+    ownerSolicitor : Party
+    owner : Party
+    auctionHouse :Party --also makes sure that all parties are legit
+    address :Text
+    idCode: Text --Create an asset ID. To be generated offline 
+    a_description : Text 
+    a_documents : [Text]
+    a_docLink : Text --Creates a link to the documents       
+    v_description : Text 
+    v_documents : [Text]
+    v_docLink : Text --Creates a link to the documents 
+    date: Time
+
+  where
+    signatory ownerSolicitor
+    observer owner,auctionHouse  
+
+    key (ownerSolicitor, idCode) : (Party, Text)
+    maintainer key._1
+        
+    choice UpdateAsset 
+      : ContractId Asset 
+      with 
+            updated_address :Text
+            updated_a_description : Text 
+            updated_a_documents : [Text]
+            updated_a_docLink : Text       
+            updated_v_description : Text 
+            updated_v_documents : [Text]
+            updated_v_docLink : Text 
+            updated_date:Time
+
+      controller ownerSolicitor 
+        do 
+            create this with
+              address = updated_address
+              a_description = updated_a_description 
+              a_documents = a_documents ++ updated_a_documents
+              a_docLink = updated_a_docLink      
+              v_description = updated_v_description
+              v_documents = v_documents ++ updated_v_documents
+              v_docLink = updated_v_docLink
+              date = updated_date
+
+template AssetHelper
+    with
+      caller : Party
+  where 
+    signatory caller
+    
+    choice GetAssetByIdCode : (AssetId, Asset)
+          with 
+            idCode : Text
+          controller caller
+          do
+            fetchByKey @Asset (caller, idCode)

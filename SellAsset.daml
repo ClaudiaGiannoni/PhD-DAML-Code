@@ -1,0 +1,95 @@
+module SellAsset where
+
+import Asset 
+
+import DA.Time (time)
+
+type AssetProposalId = ContractId AssetProposal
+type AssetContractId = ContractId AssetContract
+
+template AssetProposal
+    with       
+        idCode : Text
+        proposerOwnerSolicitor:Party
+        proposerOwner:Party
+        notes: Text
+        date: Time
+        ownerSolicitor: Party
+        owner :Party
+        auctionHouse: Party
+
+    where 
+        signatory ownerSolicitor
+        observer owner, proposerOwner, auctionHouse, proposerOwnerSolicitor
+
+        key (ownerSolicitor, idCode) : (Party, Text)
+        maintainer key._1
+
+-- What the seller can do (through the Owner Solicitor)
+-- Propose to sell the asset
+        choice MakeAssetContractOffer
+            : AssetProposalId
+            with
+                assetproposal : Text 
+            controller ownerSolicitor --buyer sends feedback to owner solicitor
+            do create this
+
+--revise the offer 
+        choice ReviseAssetContractOffer
+            : AssetProposalId
+            with 
+                offerRevison :Text
+            controller proposerOwnerSolicitor
+            do create this with
+                notes = offerRevison
+
+-- What the buyer can do (through the New Owner Solicitor)
+
+--reject the offer 
+        choice RejectAssetContractOffer
+            :  AssetProposalId
+            with
+                feedback : Text
+            controller proposerOwnerSolicitor 
+            do create this with 
+                notes = feedback  
+
+---accept the offer
+        choice AcceptAssetProposal
+            : AssetContractId           
+            controller proposerOwnerSolicitor        
+            do 
+                create AssetContract with
+                    idCodeAsset = idCode
+                    buyer =  proposerOwner
+                    seller = owner
+                    buyerSolicitor = proposerOwnerSolicitor
+                    sellerSolicitor = ownerSolicitor
+                    contractNotes = notes
+                    contractDate = date 
+                    auctionHouseInContract = auctionHouse
+
+--------------------------
+template AssetContract 
+    with 
+        idCodeAsset: Text
+        buyer : Party
+        seller: Party
+        buyerSolicitor : Party
+        sellerSolicitor : Party
+        contractNotes : Text
+        contractDate : Time
+        auctionHouseInContract :Party
+
+    where 
+        signatory buyerSolicitor, sellerSolicitor
+        observer buyer, seller, auctionHouseInContract
+        
+        key (buyerSolicitor, idCodeAsset) : (Party, Text)
+        maintainer key._1
+
+
+
+
+
+
