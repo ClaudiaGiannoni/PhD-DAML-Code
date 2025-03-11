@@ -1,0 +1,72 @@
+{-# LANGUAGE MultiWayIf #-}
+
+module WeightedScore where
+
+import Daml.Script
+import DA.Time
+
+type GiveScoreId = ContractId GiveScore
+
+
+template GiveScore
+
+    with 
+        mainEntity : Party
+        score : Int
+        scoreNotes : Text
+        entity: Party
+        entityIdCode: Text
+        date: Time
+
+    where 
+        signatory mainEntity 
+        observer entity
+        ensure (score>=0)
+
+        key (mainEntity, score) : (Party, Int)
+        maintainer key._1    
+
+        choice AssignScore
+            : GiveScoreId
+            with 
+                weightedScore :Int
+                scoreComment: Text
+                updatedDate: Time
+
+            controller mainEntity
+         
+            do
+
+                if | weightedScore>=0 && weightedScore<=4 && scoreComment == "Junior professional" ->
+                      create this with 
+                        score = weightedScore
+                        scoreNotes = scoreComment
+                        date = updatedDate
+                        
+                    | weightedScore>4 && weightedScore<=7 && scoreComment == "Experienced professional" ->
+                        create this with 
+                            score = weightedScore     
+                            scoreNotes = scoreComment 
+                            date = updatedDate 
+
+                    | weightedScore>7 && weightedScore<=10 && scoreComment == "Top professional" ->
+                        create this with 
+                            score = weightedScore
+                            scoreNotes = scoreComment
+                            date = updatedDate
+                    | otherwise -> abort "The score must be an integer between 0 and 10"
+
+
+template AssetHelper
+    with
+      caller : Party
+  where 
+    signatory caller
+    
+    choice GetProfessionalByScore : (GiveScoreId, GiveScore)
+          with 
+            score : Int
+          controller caller
+          do
+            fetchByKey @GiveScore (caller, score)
+
