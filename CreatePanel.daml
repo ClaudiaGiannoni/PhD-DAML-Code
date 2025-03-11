@@ -1,0 +1,41 @@
+module CreatePanel where
+
+import Daml.Script
+import DA.Time
+import DA.Action
+import DA.Set as Set
+import DA.List
+import InviteProfessionals
+
+type PanelId = ContractId Panel
+
+template Panel 
+    with
+
+        scoreGiver : Party
+        topPanel: Set Party
+        date: Time
+        notes: Text
+
+    where 
+        signatory scoreGiver
+        observer topPanel
+    
+        choice AddProfessional
+            : ContractId Panel
+            with
+                chosenProfessional: Party
+                score : Int
+                newDate: Time
+                updatedNote : Text
+
+            controller scoreGiver 
+            do
+                assertMsg "The score must be an integer betwen 7 and 10" $
+                    (score>7 && score<=10) 
+                create this with 
+                    topPanel = Set.insert chosenProfessional topPanel
+                    notes = updatedNote
+
+
+

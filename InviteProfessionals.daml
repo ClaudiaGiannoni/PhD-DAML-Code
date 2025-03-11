@@ -1,0 +1,36 @@
+
+module InviteProfessionals where
+
+import Daml.Script
+import DA.Time
+import WeightedScore
+
+type InviteProfessionalsId = ContractId InviteProfessionals
+
+template InviteProfessionals
+    with 
+        score : Int
+        inviter : Party
+        invitee : Party
+        notes : Text
+        date : Time 
+
+    where
+        signatory inviter 
+        observer invitee
+        ensure (score >7 && score <=10)
+
+        key (inviter, score) : (Party, Int)
+        maintainer key._1
+
+        choice Makeinvitation 
+            : InviteProfessionalsId
+            with 
+                inviteNotes: Text 
+            controller inviter 
+            do 
+                create this with 
+                    notes = inviteNotes
+
+
+

@@ -1,0 +1,110 @@
+module Main where
+
+import WeightedScore
+import InviteProfessionals
+import CreatePanel
+
+import Daml.Script
+import DA.Time
+import qualified DA.Set as Set
+
+setup : Script ()
+setup = script do
+
+-- user_setup_begin
+  assetManager <- allocatePartyWithHint "Asset Manager" (PartyIdHint "Asset Manager")
+  professional1 <- allocatePartyWithHint "Professional 1" (PartyIdHint "Professional 1")
+  professional2 <- allocatePartyWithHint "Professional 2" (PartyIdHint "Professional 2")
+  professional3 <- allocatePartyWithHint "Professional 3" (PartyIdHint "Professional 3")
+  professional4 <- allocatePartyWithHint "Professional 4" (PartyIdHint "Professional 4")
+  time <- getTime
+
+  startingScore <- submit assetManager do 
+    createCmd GiveScore with 
+      mainEntity = assetManager
+      score = 0
+      scoreNotes = " Base case"
+      entity = professional1
+      entityIdCode = "XX123YY"
+      date = time
+
+
+  badProfessional <- submit assetManager do
+    exerciseCmd startingScore AssignScore with 
+      weightedScore = 4
+      scoreComment = "Junior professional"
+      updatedDate = time
+
+
+  mediumProfessional <- submit assetManager do
+    exerciseCmd badProfessional AssignScore with 
+      weightedScore = 5
+      scoreComment = "Experienced professional"
+      updatedDate = time
+
+
+  goodProfessional <- submit assetManager do  
+    exerciseCmd mediumProfessional AssignScore with 
+      weightedScore = 8
+      scoreComment = "Top professional"
+      updatedDate = time
+
+-- testing Invite professionals 
+
+--quaery. Find top professionals (score >7, <=10)
+  Some professional <- queryContractId assetManager goodProfessional
+
+  (currentScoreId, currentScore) <- submit assetManager do
+    createAndExerciseCmd (AssetHelper assetManager) GetProfessionalByScore with
+      score = 8
+
+  invite <- submit assetManager do
+    createCmd InviteProfessionals 
+      with
+        score =8
+        inviter =  assetManager
+        invitee = professional1
+        notes = " Only Top professionals panel"
+        date = time
+
+
+  makeinvitation <- submit assetManager do
+    exerciseCmd invite Makeinvitation with
+      inviteNotes = "You have been invited to the top professioanl panel"
+
+--testing creating panel
+
+  createPanel <- submit assetManager do 
+    createCmd Panel 
+      with  
+        scoreGiver= assetManager     
+        topPanel = Set.empty
+        date= time
+        notes = "Panel creation"
+
+  addProfessional <- submit assetManager do
+  
+    exerciseCmd createPanel AddProfessional 
+      with
+        score = 8
+        chosenProfessional = professional4
+        newDate = time
+        updatedNote = "Mr Al pacino added to panel"
+
+  addAnotherProfessional <- submit assetManager do
+  
+    exerciseCmd addProfessional AddProfessional 
+      with
+        score = 9
+        chosenProfessional = professional3
+        newDate = time
+        updatedNote = "Mrs Julia Roberts added to panel"
+
+
+
+  return ()
+
+
+
+
+
